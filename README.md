@@ -1,0 +1,205 @@
+# NAME
+
+String::Random::Regexp::regxstring - Generate random strings from a regular expression
+
+# VERSION
+
+Version 1.04
+
+# SYNOPSIS
+
+This module provides functionality for generating random strings from a
+regular expression by bridging
+to the [regxstring C++ library by daidodo](https://github.com/daidodo/regxstring)
+via XS.
+
+    use String::Random::Regexp::regxstring;
+
+    my $strings = generate_random_strings(
+        '^([A-Z]|[0-9]){10}\d{5}xxx(\d{3})?',
+        3
+    );
+    # generates 3 random strings based on the regexp
+    #   3F3YR2W22947580xxx
+    #   N5HHM8LW0K59719xxx957
+    #   G2DQL6JF1E91086xxx
+
+    # or provide it with a Regexp object
+    my $strings = generate_random_strings(
+        qr/^([A-Z]|[0-9]){10}\d{5}xxx(\d{3})?/,
+        3
+    );
+
+    # or enable debug
+    my $strings = generate_random_strings(
+        qr/^([A-Z]|[0-9]){10}\d{5}xxx(\d{3})?/,
+        3,
+        1
+    );
+
+# EXPORT
+
+- `generate_random_strings` : generates random strings. This sub is exported by default.
+
+# SUBROUTINES
+
+## `generate_random_strings`
+
+    my $strings = generate_random_strings($regexp [, $N, $debug])
+
+Arguments:
+
+- `$regexp` : a regular expression either as a string
+or as a Regexp object created via e.g. `qr/.../`
+- `$N` : optionally specify the number of random strings to generate. Default is 1.
+- `$debug` : optionally enable debug, if set to 1. By default it is turned off.
+
+Given a regular expression, this subroutine will generate
+`$N` random strings which are guaranteed to be matched by
+the specified regular expression.
+
+The generated random strings will be returned back as an ARRAY ref.
+
+`undef` is returned on error, e.g. when no regular expression was
+specified or when the number of random strings to generate is not positive.
+
+# THE C++ LIBRARY regxstring by daidodo
+
+This is a [regxstring C++ library by daidodo](https://github.com/daidodo/regxstring)
+which produces random strings from a regular expresssion. According to the
+author, "_... most Perl 5 supported regular expressions are also supported by regxstring, as showing bellow:_"
+
+    Meta-character(s)   Description
+    --------------------------------
+    \                   Quote the next meta-character
+    ^                   Match the beginning of the line
+    $                   Match the end of the line (or before newline at the end)
+    ?                   Match 1 or 0 times
+    +                   Match 1 or more times
+    *                   Match 0 or more times
+    {n}                 Match exactly n times
+    {n,}                Match at least n times
+    {n,m}               Match at least n but not more than m times
+    .                   Match any character (except newline)
+    (pattern)           Grouping
+    (?:pattern)         This is for clustering, not capturing; it groups sub-expressions like "()", but doesn't make back-references as "()" does
+    (?=pattern)         A zero-width positive look-ahead assertion, e.g., \w+(?=\t) matches a word followed by a tab, without including the tab
+    (?!pattern)         A zero-width negative look-ahead assertion, e.g., foo(?!bar) matches any occurrence of "foo" that isn't followed by "bar"
+    |                   Alternation
+    [xyz]               Matches a single character that is contained within the brackets
+    [^xyz]              Matches a single character that is not contained within the brackets
+    [a-z]               Matches a single character that is in a given range
+    [^a-z]              Matches a single character that is not in a given range
+    \f                  Form feed
+    \n                  Newline
+    \r                  Return
+    \t                  Tab
+    \v                  Vertical white space
+    \d                  Digits, [0-9]
+    \D                  Non-digits, [^0-9]
+    \s                  Space and tab, [ \t\r\n\f]
+    \S                  Non-white space characters, [^ \t\r\n\f]
+    \w                  Alphanumeric characters plus '_', [0-9a-zA-Z_]
+    \W                  Non-word characters, [^0-9a-zA-Z_]
+    \N                  Matches what the Nth marked sub-expression matched, where N is a digit from 1 to 9
+
+The library provides an executable which may be run from the command line.
+It takes a regular expression
+from the standard input
+and dumps the random strings.
+
+# ALTERNATIVES
+
+There are at least two alternative modules at CPAN which I have tested.
+
+[String::Random](https://metacpan.org/pod/String%3A%3ARandom) and [Regexp::Genex](https://metacpan.org/pod/Regexp%3A%3AGenex). Both fail with rudimentary
+regular expressions.
+
+The former does not support groups and therefore
+all parentheses have to be removed from the regular expression first.
+But this is not a trivial task. For example:
+
+    use String::Random qw/random_regex/;
+    print random_regex('[A-HN-SW]\d{7}[A-J]ES[A-HN-SW]\d{7}[A-J](?:xx)?');
+    # '(' not implemented.  treating literally.
+
+The latter fails randomly on large regular expressions, e.g. `[A-HN-SW]\d{7}[A-J]xxx`
+but succeeds with the shorter `[A-HN-SW]\d{7}[A-J]`
+
+# AUTHOR
+
+Andreas Hadjiprocopis, `<bliako at cpan.org>`
+
+# DEDICATIONS
+
+!Almaz!
+
+# CAVEATS
+
+The XS function for generating random strings accepts
+the input regular expression as a string. This means
+that if a Regexp object was supplied to [generate\_random\_strings](https://metacpan.org/pod/generate_random_strings),
+the regular expression as a string must be extracted. And this
+is done by stringifying the Regexp object, e.g. `my $str = "".qr/abc/`
+However, the stringification encloses the regular expression within
+a `(?^:` and `)`. For example:
+
+    print "".qr/^(abc)/
+    # prints (?^:^(abc))
+
+Currently, the subroutine will remove this "enclosure".
+It remains to be seen whether this is 100% successful.
+
+I have not tested the statistical distribution of the results in
+regular expressions like `a|b|c|d`. They must appear equally often.
+
+# BUGS
+
+Please report any bugs or feature requests to `bug-string-random-regexp-regxstring at rt.cpan.org`, or through
+the web interface at [https://rt.cpan.org/NoAuth/ReportBug.html?Queue=String-Random-Regexp-regxstring](https://rt.cpan.org/NoAuth/ReportBug.html?Queue=String-Random-Regexp-regxstring).  I will be notified, and then you'll
+automatically be notified of progress on your bug as I make changes.
+
+# SEE ALSO
+
+[Mock::Data::Regex](https://metacpan.org/pod/Mock%3A%3AData%3A%3ARegex) which is implemented in Pure-Perl.
+
+# SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc String::Random::Regexp::regxstring
+
+You can also look for information at:
+
+- RT: CPAN's request tracker (report bugs here)
+
+    [https://rt.cpan.org/NoAuth/Bugs.html?Dist=String-Random-Regexp-regxstring](https://rt.cpan.org/NoAuth/Bugs.html?Dist=String-Random-Regexp-regxstring)
+
+- Review this module at PerlMonks
+
+    [https://perlmonks.org/?node\_id=11160309](https://perlmonks.org/?node_id=11160309)
+
+- Search CPAN
+
+    [https://metacpan.org/release/String-Random-Regexp-regxstring](https://metacpan.org/release/String-Random-Regexp-regxstring)
+
+# ACKNOWLEDGEMENTS
+
+The core functionality to this module is provided by the C++
+library for generating random strings from regular expressions
+located at [https://github.com/daidodo](https://github.com/daidodo).
+The author is DoZerg / daidodo. The Licence is Apache v2.0.
+
+The source code of this library is included in the current module.
+
+I have provided C++ harness code, the XS interface and the Perl module.
+
+# LICENSE AND COPYRIGHT
+
+This software (except the C++ files) is Copyright (c) 2024 by Andreas Hadjiprocopis.
+
+This is free software, licensed under:
+
+    The Artistic License 2.0 (GPL Compatible)
+
+The C++ files are Copyright (c) by [daidodo](https://github.com/daidodo) and are [licensed under Apache v2.0](https://github.com/daidodo/regxstring/blob/master/LICENSE).
